@@ -5,7 +5,6 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <fstream>
 #include <map>
 
 #include "digraph.hpp"
@@ -42,17 +41,27 @@ void Digraph::validateVertex(int v)
 {
 	//TODO: add actual error checking here
 	if (v < 0 || v >= V) {
-		cout << "problems cap'n" << '\n';
+		cout << "Invalid vertex" << '\n';
 	}
+}
+
+bool Digraph::edgeExists(int v, int w)
+{
+	//TODO: add function
+	return false;
 }
 
 void Digraph::addEdge(int v, int w)
 {
 	validateVertex(v);
 	validateVertex(w);
-	indegree[w]++;
-	E++;
-	adj[v].insert(w);
+	
+	if( !edgeExists(v,w) )
+	{
+		indegree[w]++;
+		E++;
+		adj[v].insert(w);
+	}
 }
 
 size_t Digraph::getOutdegree(int v)
