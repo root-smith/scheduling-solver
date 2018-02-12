@@ -3,15 +3,13 @@
 //
 
 #include <iostream>
-#include <vector>
 #include <string>
 #include <map>
+#include <algorithm>
 
 #include "digraph.hpp"
-#include "json.hpp"
 
 using namespace std;
-using Bag = std::unordered_set<int>;
 using json = nlohmann::json;
 
 //initalizes an empty digraph with V vertices
@@ -27,119 +25,203 @@ Digraph::Digraph(int n) : V(n)
 {
 	E = 0;
 	indegree.resize(n);
-	
 	adj.resize(n);
-	for (int i = 0; i < n; i++)
-		adj[i] = *new Bag();
 }
 
 // Getters
-int Digraph::getV() { return V; }
-int Digraph::getE() { return E; }
+int Digraph::get_v() { return V; }
+int Digraph::get_e() { return E; }
 
-void Digraph::validateVertex(int v)
+void Digraph::validate_vertex(int v)
 {
-	//TODO: add actual error checking here
-	if (v < 0 || v >= V) {
+	if (v < 0 ) {
 		cout << "Invalid vertex" << '\n';
+	}
+	if (v > V) {
+		cout << "Increasing V from " << V << '\n';
+		V++;
+		indegree.resize(V);
+		adj.resize(V);
 	}
 }
 
-bool Digraph::edgeExists(int v, int w)
+bool Digraph::vertex_exists(int v)
 {
-	//TODO: add function
+	//TODO: check for missing vertices
+	if (v < adj.size())
+		return true;
 	return false;
 }
 
-void Digraph::addEdge(int v, int w)
+bool Digraph::edge_exists(int v, int w)
 {
-	validateVertex(v);
-	validateVertex(w);
+	if ( find(adj[v].begin(), adj[v].end(), w) != adj[v].end() )
+		return true;
+	else
+		return false;
+}
+
+void Digraph::add_edge(int v, int w)
+{
+	validate_vertex(v);
+	validate_vertex(w);
 	
-	if( !edgeExists(v,w) )
+	if( !edge_exists(v,w) )
 	{
 		indegree[w]++;
 		E++;
-		adj[v].insert(w);
+		adj[v].push_back(w);
+		//cout << "adding edge " << v << " to " << w << "; E is " << E << '\n';
 	}
 }
 
-size_t Digraph::getOutdegree(int v)
+size_t Digraph::get_outdegree(int v)
 {
-	Digraph::validateVertex(v);
+	validate_vertex(v);
 	return adj[v].size();
 }
 
-size_t Digraph::getIndegree(int v)
+size_t Digraph::get_indegree(int v)
 {
-	validateVertex(v);
+	validate_vertex(v);
 	return indegree[v];
 }
 
-Digraph::Digraph(json j)
+Digraph::Digraph(const json& j)
 {
 	if ( j.find("edges") != j.end() && j.find("vertices") != j.end() && j.find("edge_list") != j.end())
 	{
-		E = j["edges"];
+		//E = j["edges"];
+		E = 0; //TODO: E is set from the edge list, not the json data
 		V = j["vertices"];
 		
 		indegree.resize(V);
 		adj.resize(V);
-		for (int i = 0; i < V; i++)
-			adj[i] = *new Bag();
 		
 		for (auto& edge : j["edge_list"])
-			addEdge(edge[0],edge[1]);
+			add_edge(edge[0],edge[1]);
 	} else
-		cout << "Error parsing data from json file";
+		cout << "Error parsing data from json file\n";
+	if(!graph_is_valid())
+		cout << "Json file does not contain valid graph\n";
+		
 }
 
 json Digraph::to_json() {
 
 	int cnt_edge = 0;
-	map<string, pair<int, int>> edge_list;
+	const auto edge_list = Digraph::get_edge_list();
+	map<string, pair<int, int>> m;
 	
-	//generate list of every edge based on adjacency list
-	for (int b = 0; b < adj.size(); b++)
+	for (auto i : edge_list)
+		m.emplace(to_string(cnt_edge++), i );
+	
+	//generate vertex list from edge list
+	unordered_set<int> vertex_list;
+	for (auto i : edge_list)
 	{
-		for (auto it = begin(adj[b]); it != end(adj[b]); it++)
-		{
-			pair<int, int> new_pair = {b, *it};
-			edge_list.emplace(to_string(cnt_edge), new_pair);
-			cnt_edge++;
-		}
+		vertex_list.insert(i.first);
+		vertex_list.insert(i.second);
 	}
 	
 	json j;
-	j["edge_list"] = edge_list;
+	j["edge_list"] = m;
 	j["edges"] = cnt_edge;
-	j["vertices"] = adj.size();
+	j["vertices"] = vertex_list.size();
 	
-	cout << "j: " << j << '\n';
+	//cout << "j: " << j << '\n';
 	
-	return j;
-	
-	/*
-	 Saving to ask a question about iterators:
-	 
-	 for (int b = 0; b < adj.size(); b++)
-	 {
-		for (auto it = begin(adj[b]); it != end(adj[b]); it++)
-	 	{
-		 //trailing comma
-		 if (it != begin(adj[b])) edge_list.append(", ");
-	 
-		 //generate list of tuples
-		 string from_v = to_string(b);
-		 string to_v = to_string(*it);
-		 edge_list.append('"' + to_string(cnt_edge) + "\": " + '[' + from_v + ',' + to_v + "]");
-		 cnt_edge++;
-		}
-		edge_list.append(" ");
-	 }
-	 
-	 cout << "edge_list: " << edge_list << '\n';
-	 
-	 */
-	
+	return j;	
 }
+
+vector<pair<int, int>> Digraph::get_edge_list() {
+
+	vector<pair<int, int>> edge_list;
+	
+	//QUESTION: is there a better way to do this?
+	//adj is a vector<vector<int>>
+	//trying to make a vector<pair<int, int>> that contains all edges
+	for (int i = 0; i < adj.size(); i++)
+	{
+		for (auto it = begin(adj[i]); it != end(adj[i]); it++)
+		{
+			pair<int, int> new_pair = {i, *it};
+			edge_list.push_back(new_pair);
+		}
+	}
+	return edge_list;
+}
+
+string Digraph::edge_list_to_string() {
+	auto edge_list = Digraph::get_edge_list();
+	string s;
+	
+	for (auto vertex: edge_list)
+	{
+		s.append( "<" + to_string(vertex.first) + "," + to_string(vertex.second) + ">\n");
+	}
+	return s;
+}
+
+bool Digraph::graph_is_valid()
+{
+	auto edge_list = get_edge_list();
+	unordered_set<int> vertex_list;
+	
+	for (auto i : edge_list)
+	{
+		vertex_list.insert(i.first);
+		vertex_list.insert(i.second);
+	}
+	
+	if (edge_list.size() == E && vertex_list.size() == adj.size() && adj.size() == V)
+		return true;
+	else
+		return false;
+}
+unordered_set<int> Digraph::get_vertex_list(){
+	//generate vertex list from edge list
+	auto edge_list = get_edge_list();
+	std::unordered_set<int> vertex_list;
+	
+	for (auto i : edge_list)
+	{
+		vertex_list.insert(i.first);
+		vertex_list.insert(i.second);
+	}
+	return vertex_list;
+}
+	
+void Digraph::describe()
+{
+	
+	auto vertex_list = get_vertex_list();
+	auto edge_list = get_edge_list();
+	
+	cout << "graph_is_valid: " << graph_is_valid() << '\n';
+	cout << "edge_list:\n" << edge_list_to_string() << '\n';
+	cout << "edge_list.size(): " << edge_list.size() << '\n';
+	cout << "Edges: " << get_e() << '\n';
+	cout << "Vertices: " << get_v() << '\n';
+	cout << "vertex_list.size(): " << vertex_list.size() << '\n';
+	cout << "adj.size(): " << adj.size() << '\n';
+}
+
+/*
+ Tests:
+ No duplicate edges
+ Acyclic
+ contiguous
+ Create small graph and verify
+ 
+ Fail on:
+ negative vertex
+ create edge that already exists
+ 
+ TODO:
+ Deep copy graph
+ DFS
+ Topological sort
+ List of all topological sorts
+ 
+*/

@@ -2,14 +2,16 @@
 //  main.cpp
 //  Solver
 
-
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <unordered_set>
 
 #include "digraph.hpp"
 #include "json.hpp"
 #include "BFS.hpp"
+#include "depth_first_order.hpp"
+#include "topological.hpp"
 
 using namespace std;
 using json = nlohmann::json;
@@ -21,43 +23,38 @@ int main()
 	json jin;
 	i >> jin;
 	
+	ofstream backup("backup.json");
+	backup << std::setw(4) << jin << '\n';
+	
 	//create digraph object from json
 	Digraph d(jin);
 	
-	json jout = d.to_json();
+	//create depth first order
+	int w = 6;
+	Depth_first_order dfs = Depth_first_order(d);
+	cout << setw(w) << 'v' << setw(w) << "pre" << setw(w) << "post" << '\n';
+	cout << "--------------------\n";
+	for (int v = 0; v < d.get_v(); v++) {
+		cout << setw(w) << v << setw(w) << dfs.preorder[v] << setw(w) << dfs.postorder[v] << '\n';
+	}
+	cout << '\n';
 	
-	cout << "json output :" << '\n';
-	cout << jout << '\n';
-	
-	ofstream o("output.json");
-	o << std::setw(4) << jout << '\n';
-	
-	int s = 0; //source
-	BreadthFirstDirectedPaths g = BreadthFirstDirectedPaths(d, s);
-	
-	cout << "dist_to 3: " << g.get_dist_to(3) << '\n';
-	
-	//TODO: hasPathTo, distTo
+	//create a topological sort
+	Topological ts = Topological(d);
+	cout << "Topological sort: \n";
+	for (int v: ts.order)
+		cout << v << '\n';
+
 	
 	/*
-	 
-	 BreadthFirstDirectedPaths bfs = new BreadthFirstDirectedPaths(G, s);
-	 
-	 for (int v = 0; v < G.V(); v++) {
-		 if (bfs.hasPathTo(v)) {
-			 StdOut.printf("%d to %d (%d):  ", s, v, bfs.distTo(v));
-			 for (int x : bfs.pathTo(v)) {
-			 	if (x == s) StdOut.print(x);
-		 		else        StdOut.print("->" + x);
-		 }
-		 StdOut.println();
-	 }
-	 
-	 else {
-	 StdOut.printf("%d to %d (-):  not connected\n", s, v);
-	 }
-	 
-	*/
+	 OUTPUT
+	json jout = d.to_json();
 	
+	cout << jout << '\n';
+	
+	ofstream o("graph.json");
+	o << std::setw(w) << jout << '\n';
+	*/
+
 	return 0;
 }

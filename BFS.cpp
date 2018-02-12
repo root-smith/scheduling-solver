@@ -7,7 +7,6 @@
 #include <string>
 #include <map>
 #include <queue>
-#include <stack>
 
 #include "digraph.hpp"
 #include "BFS.hpp"
@@ -16,11 +15,11 @@ using namespace std;
 
 BreadthFirstDirectedPaths::BreadthFirstDirectedPaths(Digraph & G, int s) : G(&G)
 {	
-	marked.resize(G.getV());
-	dist_to.resize(G.getV());
-	edge_to.resize(G.getV());
+	marked.resize(G.get_v());
+	dist_to.resize(G.get_v());
+	edge_to.resize(G.get_v());
 	
-	for (int i = 0; i < G.getV(); i++)
+	for (int i = 0; i < G.get_v(); i++)
 	{
 		dist_to[i] = (int_max);
 	}
