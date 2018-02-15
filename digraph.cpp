@@ -31,6 +31,7 @@ Digraph::Digraph(int n) : V(n)
 // Getters
 int Digraph::get_v() { return V; }
 int Digraph::get_e() { return E; }
+//int Digraph:: get_weight(int v, int w) {}
 
 void Digraph::validate_vertex(int v)
 {
@@ -55,7 +56,11 @@ bool Digraph::vertex_exists(int v)
 
 bool Digraph::edge_exists(int v, int w)
 {
-	if ( find(adj[v].begin(), adj[v].end(), w) != adj[v].end() )
+	auto it = find_if( begin(adj[v]), end(adj[v]),
+				[&w](const pair<int, double> & p){ return p.first == w;} );
+	
+	//if edge exists
+	if ( it != end(adj[v]) )
 		return true;
 	else
 		return false;
@@ -65,13 +70,29 @@ void Digraph::add_edge(int v, int w)
 {
 	validate_vertex(v);
 	validate_vertex(w);
+	double default_weight = 1;
 	
 	if( !edge_exists(v,w) )
 	{
 		indegree[w]++;
 		E++;
-		adj[v].push_back(w);
+		adj[v].push_back(make_pair(w, default_weight));
 		//cout << "adding edge " << v << " to " << w << "; E is " << E << '\n';
+	}
+}
+
+void Digraph::add_edge(int v, int w, double weight)
+{
+	validate_vertex(v);
+	validate_vertex(w);
+	
+	if( !edge_exists(v,w) )
+	{
+		indegree[w]++;
+		E++;
+		adj[v].push_back(make_pair(w, weight));
+		//cout << "adding edge " << v << " to " << w << "; E is " << E
+		//<< "; weight is " << weight << '\n';
 	}
 }
 
@@ -138,17 +159,22 @@ vector<pair<int, int>> Digraph::get_edge_list() {
 
 	vector<pair<int, int>> edge_list;
 	
+	//cout << "Edge list: \n";
+	
 	//QUESTION: is there a better way to do this?
-	//adj is a vector<vector<int>>
-	//trying to make a vector<pair<int, int>> that contains all edges
+	//adj is a vector<vector<pair<int, double>>>
+
 	for (int i = 0; i < adj.size(); i++)
 	{
 		for (auto it = begin(adj[i]); it != end(adj[i]); it++)
 		{
-			pair<int, int> new_pair = {i, *it};
+			pair<int, int> new_pair = {i, (*it).first};
 			edge_list.push_back(new_pair);
+			//cout << "<" << new_pair.first << " : " << new_pair.second << ">\n";
 		}
 	}
+	
+	
 	return edge_list;
 }
 

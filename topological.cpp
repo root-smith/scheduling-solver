@@ -60,7 +60,7 @@ void all_topological_util(vector<int>& new_solution, vector<int> visited, vector
 			// decrement indegree of adjacent vertices
 			for (auto j : adj[i])
 				indegree[j]--;
-
+			
 			//  add to result
 			new_solution.push_back(i);
 			visited[i] = true;
@@ -76,7 +76,7 @@ void all_topological_util(vector<int>& new_solution, vector<int> visited, vector
 			flag = true;
 		}
 	}
-
+	
 	//  Print solution
 	if (!flag)
 	{
@@ -94,7 +94,14 @@ vector<vector<int>> all_topological_sorts(Digraph & G)
 		visited[i] = false;
 	
 	vector<int> indegree = G.indegree;
-	const vector<vector<int>> adj = G.adj;
+	
+	//adj is a copy of G.adj with weights removed
+	vector<vector<int>> adj;
+	adj.resize(G.adj.size());
+	
+	for (size_t i = 0; i < G.adj.size(); i++ )
+		for (size_t j = 0; j < G.adj[i].size(); j++)
+			adj[i].push_back(G.adj[i][j].first);
 	
 	vector<int> new_solution;
 	vector<vector<int>> ret;

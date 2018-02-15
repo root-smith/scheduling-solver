@@ -12,6 +12,7 @@
 #include "BFS.hpp"
 #include "depth_first_order.hpp"
 #include "topological.hpp"
+#include "util.hpp"
 
 using namespace std;
 using json = nlohmann::json;
@@ -28,6 +29,7 @@ int main()
 	
 	//create digraph object from json
 	Digraph d(jin);
+	
 	
 	//create depth first order
 	int w = 6;
@@ -57,6 +59,24 @@ int main()
 	cout << '\n';
 	
 	cout << all_tsorts.size() << " unique topological sorts generated.\n";
+	
+	if (all_tsorts.size() > 10)
+	{
+		cout << "Listing first 10 topological sorts: \n";
+		for (auto i : Range<0, 10>())
+		{
+			for (auto j : all_tsorts[i])
+				cout << j << ' ';
+			cout << '\n';
+		}
+	}
+	else
+	{
+		for (auto i : all_tsorts)
+			for (auto j : i)
+				cout << j << ' ';
+			cout << '\n';
+	}
 	
 	/*
 	 OUTPUT
