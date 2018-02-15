@@ -47,7 +47,7 @@ void Topological::validate_vertex(int v)
 
 
 
-void all_topological_util(vector<int> res, vector<int> visited, vector<int>& indegree, const vector<vector<int>>& adj)
+void all_topological_util(vector<int>& new_solution, vector<int> visited, vector<int>& indegree, const vector<vector<int>>& adj, vector<vector<int>>& ret)
 {
 	bool flag = false;
 	
@@ -62,14 +62,14 @@ void all_topological_util(vector<int> res, vector<int> visited, vector<int>& ind
 				indegree[j]--;
 
 			//  add to result
-			res.push_back(i);
+			new_solution.push_back(i);
 			visited[i] = true;
-			all_topological_util(res, visited, indegree, adj);
+			all_topological_util(new_solution, visited, indegree, adj, ret);
 			
 			// resetting visited, res and indegree for
 			// backtracking
 			visited[i] = false;
-			res.erase(res.end() - 1);
+			new_solution.erase(new_solution.end() - 1);
 			for (auto j = adj[i].begin(); j != adj[i].end(); j++)
 				indegree[*j]++;
 			
@@ -80,13 +80,11 @@ void all_topological_util(vector<int> res, vector<int> visited, vector<int>& ind
 	//  Print solution
 	if (!flag)
 	{
-		for (int i = 0; i < res.size(); i++)
-			cout << res[i] << " ";
-		cout << '\n';
+		ret.push_back(new_solution);
 	}
 }
 
-void all_topological_sorts(Digraph & G)
+vector<vector<int>> all_topological_sorts(Digraph & G)
 {
 	
 	// Mark all the vertices as not visited
@@ -98,8 +96,11 @@ void all_topological_sorts(Digraph & G)
 	vector<int> indegree = G.indegree;
 	const vector<vector<int>> adj = G.adj;
 	
-	vector<int> res;
-	all_topological_util(res, visited, indegree, adj);
+	vector<int> new_solution;
+	vector<vector<int>> ret;
+	all_topological_util(new_solution, visited, indegree, adj, ret);
+	
+	return ret;
 }
 
 

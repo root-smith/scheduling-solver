@@ -22,3 +22,5 @@ public:
 	void validate_vertex(int v);
 	
 };
+
+vector<vector<int>> all_topological_sorts(Digraph & G);

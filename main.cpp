@@ -40,11 +40,23 @@ int main()
 	cout << '\n';
 	
 	//create a topological sort
+	/*
 	Topological ts = Topological(d);
 	cout << "Topological sort: \n";
-	for (int v: ts.order)
-		cout << v << '\n';
-
+	for (int i = 0; i < ts.order.size(); i++)
+	{
+		if (i != 0)
+			cout << " => ";
+		cout << ts.order[i];
+	}
+	cout << '\n';
+	*/
+	
+	vector<vector<int>> all_tsorts = all_topological_sorts(d);
+	
+	cout << '\n';
+	
+	cout << all_tsorts.size() << " unique topological sorts generated.\n";
 	
 	/*
 	 OUTPUT
