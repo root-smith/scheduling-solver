@@ -1,13 +1,8 @@
-//
-//  depth_first_order.cpp
-//  Solver
-//
-
 #include <iostream>
 
 #include "depth_first_order.hpp"
 
-Depth_first_order::Depth_first_order(Digraph & G)
+Depth_first_order::Depth_first_order(const Digraph & G)
 {
 	pre.resize(G.get_v());
 	post.resize(G.get_v());
@@ -17,12 +12,14 @@ Depth_first_order::Depth_first_order(Digraph & G)
 		if (!marked[v]) dfs(G, v);
 }
 
-void Depth_first_order::dfs(Digraph & G, int v)
+void Depth_first_order::dfs(const Digraph & G, int v)
 {
 	marked[v] = true;
 	pre[v] = pre_counter++;
 	preorder.push_front(v);
-	for ( int w : G.adj[v] ) {
+	for (auto w = 0; w < G.adj[v].size(); w++)
+	{
+	//for ( int w : G.adj[v] ) {
 		if (!marked[w]) {
 			dfs(G, w);
 		}
@@ -31,8 +28,7 @@ void Depth_first_order::dfs(Digraph & G, int v)
 	post[v] = post_counter++;
 }
 
-int Depth_first_order::get_pre(int v) { return pre[v]; }
-int Depth_first_order::get_post(int v) { return post[v]; }
+
 
 bool Depth_first_order::check()
 {
@@ -55,7 +51,6 @@ bool Depth_first_order::check()
 		}
 		r++;
 	}
-	
 	return true;
 }
 
@@ -63,7 +58,9 @@ void Depth_first_order::validate_vertex(int v)
 {
 	auto V = marked.size();
 	if (v < 0 || v >= V)
-		cout << "error\n";
+		std::cout << "error with dfs number of vertices < 0\n";
+	if (v >= V)
+		std::cout << "error with dfs number of vertices greater than max number of vertices\n";
 }
 
 /*

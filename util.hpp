@@ -19,12 +19,13 @@ class Range
 
 				//operator overloading
 				Iterator operator ++() { ++i; return *this; }
-				int operator *() const { return i; }
+				int operator *() { return i; }
 			
 				bool operator ==(const Iterator & other) const { return i == other.i; }
 				bool operator !=(const Iterator & other) const { return i != other.i; }
 		};
-	
+
 		Iterator begin() const { return Iterator(int_begin); }
 		Iterator end() const { return Iterator(int_end); }
+
 };
