@@ -1,134 +1,156 @@
-//
-//  digraph.cpp
-//
-
 #include <iostream>
-#include <string>
-#include <map>
 #include <algorithm>
+#include <string>
+#include <sstream>
+#include <map>
+#include <unordered_set>
+#include <typeinfo>
 
 #include "digraph.hpp"
 
 using namespace std;
 using json = nlohmann::json;
 
-//initalizes an empty digraph with V vertices
+//initalizes an empty digraph
 Digraph::Digraph()
 {
-	V = 1;
+	V = 0;
 	E = 0;
-	indegree.resize(1);
-	adj.resize(1);
-}
-
-Digraph::Digraph(int n) : V(n)
-{
-	E = 0;
-	indegree.resize(n);
-	adj.resize(n);
-}
-
-// Getters
-int Digraph::get_v() { return V; }
-int Digraph::get_e() { return E; }
-//int Digraph:: get_weight(int v, int w) {}
-
-void Digraph::validate_vertex(int v)
-{
-	if (v < 0 ) {
-		cout << "Invalid vertex" << '\n';
-	}
-	if (v > V) {
-		cout << "Increasing V from " << V << '\n';
-		V++;
-		indegree.resize(V);
-		adj.resize(V);
-	}
-}
-
-bool Digraph::vertex_exists(int v)
-{
-	//TODO: check for missing vertices
-	if (v < adj.size())
-		return true;
-	return false;
-}
-
-bool Digraph::edge_exists(int v, int w)
-{
-	auto it = find_if( begin(adj[v]), end(adj[v]),
-				[&w](const pair<int, double> & p){ return p.first == w;} );
-	
-	//if edge exists
-	if ( it != end(adj[v]) )
-		return true;
-	else
-		return false;
-}
-
-void Digraph::add_edge(int v, int w)
-{
-	validate_vertex(v);
-	validate_vertex(w);
-	double default_weight = 1;
-	
-	if( !edge_exists(v,w) )
-	{
-		indegree[w]++;
-		E++;
-		adj[v].push_back(make_pair(w, default_weight));
-		//cout << "adding edge " << v << " to " << w << "; E is " << E << '\n';
-	}
-}
-
-void Digraph::add_edge(int v, int w, double weight)
-{
-	validate_vertex(v);
-	validate_vertex(w);
-	
-	if( !edge_exists(v,w) )
-	{
-		indegree[w]++;
-		E++;
-		adj[v].push_back(make_pair(w, weight));
-		//cout << "adding edge " << v << " to " << w << "; E is " << E
-		//<< "; weight is " << weight << '\n';
-	}
-}
-
-size_t Digraph::get_outdegree(int v)
-{
-	validate_vertex(v);
-	return adj[v].size();
-}
-
-size_t Digraph::get_indegree(int v)
-{
-	validate_vertex(v);
-	return indegree[v];
+	next_id = 0;
 }
 
 Digraph::Digraph(const json& j)
 {
-	if ( j.find("edges") != j.end() && j.find("vertices") != j.end() && j.find("edge_list") != j.end())
+	next_id = 0;
+	
+	int cnt_vert = 0;
+	for (auto & vert : j["nodes"])
 	{
-		//E = j["edges"];
-		E = 0; //TODO: E is set from the edge list, not the json data
-		V = j["vertices"];
-		
-		indegree.resize(V);
-		adj.resize(V);
-		
-		for (auto& edge : j["edge_list"])
-			add_edge(edge[0],edge[1]);
-	} else
-		cout << "Error parsing data from json file\n";
-	if(!graph_is_valid())
-		cout << "Json file does not contain valid graph\n";
-		
+		string s = vert["data"]["id"];
+		vertex_list.emplace_back(Vertex(*this, s));
+		//cout << s << '\n';
+		++cnt_vert;
+	}
+	cout << "Count of vertices is " << cnt_vert << '\n';
+	
+	int cnt_edges = 0;
+	for (auto & edge : j["edges"])
+	{
+		if (edge["data"].find("source") != edge["data"].end()
+			&& edge["data"].find("target") != edge["data"].end() )
+		{
+			string s_source = edge["data"]["source"];
+			string s_target = edge["data"]["target"];
+			
+			int from_n = stoi(s_source);
+			int to_n = stoi(s_target);
+			
+			if ( edge["data"].find("weight") != edge["data"].end() )
+			{
+				string temp = edge["data"]["weight"];
+				double weight = stoi(temp);
+				new Edge(*this, from_n, to_n, weight);
+			}
+			else
+			{
+				new Edge(*this, from_n, to_n);
+			}
+			++cnt_edges;
+		}
+	}
+	cout << "Count of edges from json is " << cnt_edges << '\n';
+	cout << "Count of edges from digraph is " << get_e() << '\n';
 }
 
-json Digraph::to_json() {
+bool Digraph::map_insert(std::string s, int i)
+{
+	auto res = vertex_map.insert( std::make_pair(s, i) );
+	return res.second;
+}
+
+double Digraph::get_weight(int v, int w) const
+{
+	auto it = find_if( begin(adj[v]), end(adj[v]),
+					  [&w](const Edge & e){ return e.to_n == w;} );
+	return (*it).to_n;
+}
+
+bool Digraph::vertex_exists(string s) const
+{
+	auto it = find_if( begin(vertex_list), end(vertex_list),
+					  [&s](const Vertex & v){ return v.public_id == s;} );
+	
+	return (it != vertex_list.end());
+}
+
+bool Digraph::vertex_exists(int i) const
+{
+	return vertex_exists(std::to_string(i));
+}
+
+bool Digraph::edge_exists(const string & s1, const string & s2) const
+{
+	if ( !vertex_exists(s1) || !vertex_exists(s2) )
+		return false;
+
+	int id_from = vertex_map.at(s1);
+	int id_to = vertex_map.at(s2);
+	
+	auto it = find_if( begin(adj[id_from]), end(adj[id_from]),
+					[&id_to](const Edge & e)
+					{
+						return e.to_n == id_to;
+					} );
+	//if not unfound, return true
+	return ( it != end(adj[id_from]) );
+}
+
+bool Digraph::edge_exists(int v, int w) const
+{
+	return edge_exists(to_string(v), to_string(w));
+}
+
+size_t Digraph::get_outdegree(int v) const
+{
+	return adj[v].size();
+}
+
+size_t Digraph::get_indegree(int v) const
+{
+	return indegree[v];
+}
+
+void Digraph::add_edge(const string & s1, const string & s2, double weight)
+{
+	if (!edge_exists(s1,s2))
+		new Edge(*this, s1, s2, weight);
+}
+
+void Digraph::add_edge(int v, int w)
+{
+	add_edge(to_string(v), to_string(w), 0.0);
+}
+
+void Digraph::add_edge(int v, int w, double weight)
+{
+	add_edge(to_string(v), to_string(w), weight);
+}
+
+void Digraph::add_vertex(const string & s)
+{
+	if (!vertex_exists(s))
+		new Vertex(*this, s);
+}
+
+void Digraph::add_vertex(int i)
+{
+	add_vertex(to_string(i));
+}
+
+
+
+json Digraph::to_json() const
+{
 
 	int cnt_edge = 0;
 	const auto edge_list = Digraph::get_edge_list();
@@ -138,11 +160,11 @@ json Digraph::to_json() {
 		m.emplace(to_string(cnt_edge++), i );
 	
 	//generate vertex list from edge list
-	unordered_set<int> vertex_list;
+	vector<int> vertex_list;
 	for (auto i : edge_list)
 	{
-		vertex_list.insert(i.first);
-		vertex_list.insert(i.second);
+		vertex_list.push_back(i.first);
+		vertex_list.push_back(i.second);
 	}
 	
 	json j;
@@ -155,30 +177,23 @@ json Digraph::to_json() {
 	return j;	
 }
 
-vector<pair<int, int>> Digraph::get_edge_list() {
+vector<pair<int, int>> Digraph::get_edge_list() const
+{
 
 	vector<pair<int, int>> edge_list;
 	
 	//cout << "Edge list: \n";
 	
-	//QUESTION: is there a better way to do this?
-	//adj is a vector<vector<pair<int, double>>>
-
-	for (int i = 0; i < adj.size(); i++)
-	{
-		for (auto it = begin(adj[i]); it != end(adj[i]); it++)
-		{
-			pair<int, int> new_pair = {i, (*it).first};
-			edge_list.push_back(new_pair);
-			//cout << "<" << new_pair.first << " : " << new_pair.second << ">\n";
-		}
-	}
-	
+	//adj is std::vector<std::vector<Edge>>
+	for (auto v : adj)
+		for(auto e : v)
+			edge_list.emplace_back(pair<int,int>{e.from_n, e.to_n});
 	
 	return edge_list;
 }
 
-string Digraph::edge_list_to_string() {
+string Digraph::edge_list_to_string() const
+{
 	auto edge_list = Digraph::get_edge_list();
 	string s;
 	
@@ -189,15 +204,15 @@ string Digraph::edge_list_to_string() {
 	return s;
 }
 
-bool Digraph::graph_is_valid()
+bool Digraph::graph_is_valid() const
 {
 	auto edge_list = get_edge_list();
-	unordered_set<int> vertex_list;
+	vector<int> vertex_list;
 	
 	for (auto i : edge_list)
 	{
-		vertex_list.insert(i.first);
-		vertex_list.insert(i.second);
+		vertex_list.push_back(i.first);
+		vertex_list.push_back(i.second);
 	}
 	
 	if (edge_list.size() == E && vertex_list.size() == adj.size() && adj.size() == V)
@@ -205,49 +220,72 @@ bool Digraph::graph_is_valid()
 	else
 		return false;
 }
-unordered_set<int> Digraph::get_vertex_list(){
+vector<int> Digraph::get_vertex_list() const
+{
 	//generate vertex list from edge list
 	auto edge_list = get_edge_list();
-	std::unordered_set<int> vertex_list;
+	vector<int> vertex_list;
 	
 	for (auto i : edge_list)
 	{
-		vertex_list.insert(i.first);
-		vertex_list.insert(i.second);
+		vertex_list.push_back(i.first);
+		vertex_list.push_back(i.second);
 	}
 	return vertex_list;
 }
 	
-void Digraph::describe()
+stringstream Digraph::describe() const
 {
+	stringstream ss;
 	
 	auto vertex_list = get_vertex_list();
 	auto edge_list = get_edge_list();
 	
-	cout << "graph_is_valid: " << graph_is_valid() << '\n';
-	cout << "edge_list:\n" << edge_list_to_string() << '\n';
-	cout << "edge_list.size(): " << edge_list.size() << '\n';
-	cout << "Edges: " << get_e() << '\n';
-	cout << "Vertices: " << get_v() << '\n';
-	cout << "vertex_list.size(): " << vertex_list.size() << '\n';
-	cout << "adj.size(): " << adj.size() << '\n';
+	ss << "graph_is_valid: " << graph_is_valid() << '\n';
+	ss << "edge_list:\n" << edge_list_to_string() << '\n';
+	ss << "edge_list.size(): " << edge_list.size() << '\n';
+	ss << "Edges: " << get_e() << '\n';
+	ss << "Vertices: " << get_v() << '\n';
+	ss << "vertex_list.size(): " << vertex_list.size() << '\n';
+	ss << "adj.size(): " << adj.size() << '\n';
+	ss << "adj list: \n";
+	
+	for (auto v : adj)
+	{
+		for (Edge e : v)
+			cout << e.to_n;
+		cout << '\n';
+	}
+	
+	return ss;
 }
 
-/*
- Tests:
- No duplicate edges
- Acyclic
- contiguous
- Create small graph and verify
- 
- Fail on:
- negative vertex
- create edge that already exists
- 
- TODO:
- Deep copy graph
- DFS
- Topological sort
- List of all topological sorts
- 
-*/
+vector<vector<int>> Digraph::get_adj_list() const
+{
+	//returns internal vector<vector<Edge>> as vector<vector<int>>
+	//where int is adjacent node IDs
+	vector<vector<int>> ret;
+	
+	cout << "Get adj list: \n";
+	
+	for (auto v : adj)
+	{
+		vector<int> t;
+		for (Edge e : v)
+			t.emplace_back(e.to_n);
+		ret.push_back(t);
+	}
+	return ret;
+}
+
+bool is_valid_path(const Digraph & G, const std::vector<int> v)
+{
+	bool flag = true;
+		
+	for (size_t i = 0; i < v.size()-1; i++)
+		if (!G.edge_exists(v[i],v[i+1]))
+			flag = false;
+	return flag;
+}
+
+

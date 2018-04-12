@@ -1,28 +1,25 @@
-//
-//  topological.cpp
-//  Solver
-//
-
 #include <iostream>
 #include "topological.hpp"
-#include "depth_first_order.hpp"
+#include "directed_dfs.hpp"
 
-vector<int> order;
-vector<int> rank;
+using namespace std;
 
-Topological::Topological(Digraph & G)
+std::vector<int> order;
+std::vector<int> rank;
+
+Topological::Topological(const Digraph & G)
 {
 	//TODO: check for directed cycles
 	
-	Depth_first_order dfs = Depth_first_order(G);
-	size_t size = dfs.postorder.size();
+	directed_dfs dfs = directed_dfs(G);
+	size_t size = dfs.reverse_postorder.size();
 	
 	if ( size > INT_MAX )
 		throw std::overflow_error("Postorder size is larger than INT_MAX");
 		//TODO: catch this somewhere
 	int i = static_cast<int>(size);
 	
-	for (auto it = end(dfs.postorder) - 1; it != begin(dfs.postorder) - 1; --it )
+	for (auto it = end(dfs.reverse_postorder) - 1; it != begin(dfs.reverse_postorder) - 1; --it )
 	{
 		order.push_back(*it);
 		rank.push_back(--i);
@@ -44,8 +41,6 @@ void Topological::validate_vertex(int v)
 	if (v < 0 || v >= V)
 		std::cout << "vertex " << v << " is not between 0 and " << (V-1) << '\n';
 }
-
-
 
 void all_topological_util(vector<int>& new_solution, vector<int> visited, vector<int>& indegree, const vector<vector<int>>& adj, vector<vector<int>>& ret)
 {
@@ -84,7 +79,7 @@ void all_topological_util(vector<int>& new_solution, vector<int> visited, vector
 	}
 }
 
-vector<vector<int>> all_topological_sorts(Digraph & G)
+vector<vector<int>> all_topological_sorts(const Digraph & G)
 {
 	
 	// Mark all the vertices as not visited
@@ -94,14 +89,28 @@ vector<vector<int>> all_topological_sorts(Digraph & G)
 		visited[i] = false;
 	
 	vector<int> indegree = G.indegree;
+	for (auto i : indegree)
+		cout << i << ' ';
+	cout << '\n';
 	
 	//adj is a copy of G.adj with weights removed
 	vector<vector<int>> adj;
 	adj.resize(G.adj.size());
-	
+	/*
 	for (size_t i = 0; i < G.adj.size(); i++ )
 		for (size_t j = 0; j < G.adj[i].size(); j++)
-			adj[i].push_back(G.adj[i][j].first);
+			adj[i].push_back(G.adj[i][j].to_n);
+	*/
+	adj = G.get_adj_list();
+	
+	cout << "adj list: \n";
+	for (auto i : adj)
+	{
+		cout << '\n';
+		for (auto v : i)
+			cout << v << ' ';
+	}
+	cout << '\n';
 	
 	vector<int> new_solution;
 	vector<vector<int>> ret;
